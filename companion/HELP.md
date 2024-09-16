@@ -28,3 +28,12 @@ Specify the IP address of the amp you want to connect to.
 - Mute State Channel A/B/C/D
 - Amp Preset Names **(not for 5D)** **(tested with 40D other amps must be tested)**
 - Amp Perset States **(not for 5D)** **(tested with 40D other amps must be tested)**
+- Amp Preset Last (Last Recall) **(not for 5D)** **(tested with 40D other amps must be tested)**
+
+
+### Available Feedbacks for d&b audiotechnik Amps
+
+- Power State
+- Mute State Channel A/B/C/D
+- Amp Preset Last (Last Recall) **(not for 5D)** **(tested with 40D other amps must be tested)**
+
