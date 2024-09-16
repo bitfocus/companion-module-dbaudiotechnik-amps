@@ -23,3 +23,5 @@ Updates
 0.4.0 - Add AmpPreset Recall and Variables AmpPreset Names / AmpPreset State
 <br>
 1.0.0 - Add Variable Last Amp Preset Recall / Feedback Last Amp Preset Recall (First release)
+<br>
+1.0.1 - Name changed to companion-module-dbaudiotechnik-amps to adapt to other modules from d&b audiotechni

@@ -19,7 +19,7 @@
 		"apiVersion": "0.0.0",
 		"entrypoint": "../main.js"
 	},
-	"legacyIds": ["d-und-b-5d","d-und-b-amps"],
+	"legacyIds": ["d-und-b-5d", "d-und-b-amps"],
 	"manufacturer": "d&b audiotechnik",
 	"products": ["5D", "10D", "30D", "40D", "D20", "D40", "D80"],
 	"keywords": ["Amp", "Amps", "Audio", "d&b", "d&b audiotechnik"]
