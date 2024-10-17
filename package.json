@@ -1,6 +1,6 @@
 {
 	"name": "dbaudiotechnik-amps",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"main": "main.js",
 	"scripts": {
 		"format": "prettier -w ."

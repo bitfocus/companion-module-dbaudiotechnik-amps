@@ -3,7 +3,7 @@
 	"name": "d&b audiotechnik Amps",
 	"shortname": "d&b-Amps",
 	"description": "Module for controlling d&b audiotechnik Amps",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-dbaudiotechnik-amps.git",
 	"bugs": "https://github.com/bitfocus/companion-module-dbaudiotechnik-amps/issues",
