@@ -24,7 +24,7 @@ class ModuleInstance extends InstanceBase {
 		this.presetStates = []
 		this.ampPresetAgent = {}
 		this.ampEqAgents = new Map();
-		this.ampEQs = []
+		this.ampEQs = new Map();
 		this.presetLast = undefined
 		this.ready = true
 		this.updateActions(InstanceStatus.Connecting)
@@ -238,12 +238,10 @@ class ModuleInstance extends InstanceBase {
 						}
 
 						const channelCount = 2;
-						for(let i = 1; i <= channelCount; i++) {
-							const eq1 = map.get('/Config/Config_Eq1Enable' + i);
-							const eq2 = map.get('/Config/Config_Eq2Enable' + i);
-							if(eq1 && eq2) {
-								this.ampEQs.push({"eq1": eq1, "eq2": eq2});
-							}
+						for(let i = 1; i <= channelCount*2; i++) {
+							const eq1 = map.get('Config/Config_Eq1Enable' + i);
+							const eq2 = map.get('Config/Config_Eq2Enable' + i);
+								this.ampEQs.set(i,{eq1:eq1,eq2:eq2});
 						}
 						const eqCount = 2
 						const eqBandCount = 16;

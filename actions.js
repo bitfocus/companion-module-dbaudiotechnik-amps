@@ -172,10 +172,10 @@ export function updateA(self) {
 					type: 'dropdown',
 					label: 'Channel',
 					choices: [
-						{ id: 0, label: 'A' },
-						{ id: 1, label: 'B' },
-						{ id: 2, label: 'C' },
-						{ id: 3, label: 'D' },
+						{ id: 1, label: 'A' },
+						{ id: 2, label: 'B' },
+						{ id: 3, label: 'C' },
+						{ id: 4, label: 'D' },
 					],
 					default: 1,
 				},
@@ -198,8 +198,8 @@ export function updateA(self) {
 			],
 			callback: async (event) => {
 				if (self.ready) {
-					if (self.ampEQs[event.options.channel].eq1 instanceof OcaSwitch && self.ampEQs[event.options.channel].eq2 instanceof OcaSwitch) {
-						self.ampEQs[event.options.channel][event.options.eq].SetPosition(event.options.bypass_eq)
+					if (self.ampEQs.has(event.options.channel)) {
+						self.ampEQs.get(event.options.channel)[event.options.eq].SetPosition(event.options.bypass_eq)
 					}
 				}
 			}
