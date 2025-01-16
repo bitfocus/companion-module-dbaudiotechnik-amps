@@ -2,7 +2,8 @@ import { InstanceBase, Regex, runEntrypoint, InstanceStatus } from '@companion-m
 import { updateA } from './actions.js'
 import { updateF } from './feedbacks.js'
 import { updateV } from './variables.js'
-import { AmpPresets } from './amp-presets.js'
+import { AmpPresets } from './amp_custom_class/amp-presets.js'
+import { Eq_Fg } from './amp_custom_class/amp-eq.js'
 import { TCPConnection, RemoteDevice, RemoteControlClasses, Types } from 'aes70'
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
@@ -21,7 +22,9 @@ class ModuleInstance extends InstanceBase {
 		this.powerObj = {}
 		this.presetNames = []
 		this.presetStates = []
-		this.ampPresetAgent = undefined
+		this.ampPresetAgent = {}
+		this.ampEqAgents = new Map();
+		this.ampEQs = []
 		this.presetLast = undefined
 		this.ready = true
 		this.updateActions(InstanceStatus.Connecting)
@@ -195,7 +198,7 @@ class ModuleInstance extends InstanceBase {
 				})
 				if (this.ready) {
 					this.remoteDevice.add_control_classes([AmpPresets])
-
+					this.remoteDevice.add_control_classes([Eq_Fg])
 					this.updateActions() // export actions
 					this.updateFeedbacks() // export feedbacks
 					this.remoteDevice.DeviceManager.GetModelDescription().then((value) => {
@@ -233,6 +236,36 @@ class ModuleInstance extends InstanceBase {
 								this.checkFeedbacks('PowerState')
 							})
 						}
+
+						const channelCount = 2;
+						for(let i = 1; i <= channelCount; i++) {
+							const eq1 = map.get('/Config/Config_Eq1Enable' + i);
+							const eq2 = map.get('/Config/Config_Eq2Enable' + i);
+							if(eq1 && eq2) {
+								this.ampEQs.push({"eq1": eq1, "eq2": eq2});
+							}
+						}
+						const eqCount = 2
+						const eqBandCount = 16;
+						let count = 1;
+						for(let chSplit = 0; chSplit < channelCount; chSplit++) {
+							for(let block = 0; block < channelCount; block++) {
+								for(let eq = 0; eq < eqCount; eq++) {
+									for(let eqBand = 0; eqBand < eqBandCount; eqBand++) {
+										let key = "Eq/Eq_Fg" + (((eq*64)+(chSplit*2)+block+(eqBand*4))+1);
+										const eqAgent = map.get(key.toString());
+										if (eqAgent) {
+											this.ampEqAgents.set("band_"+ count,eqAgent);
+										}
+										count++;
+									}
+								}
+							}
+						}
+
+
+						this.log("debug", "Found " + this.ampEqAgents.size + " EQ Agents");
+
 						if (this.type !== '5D') {
 							this.ampPresetAgent = map.get('AmpPresets')
 						}

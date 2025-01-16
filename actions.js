@@ -1,5 +1,7 @@
 import { Types, RemoteControlClasses } from 'aes70'
-import { AmpPresets } from './amp-presets.js'
+import { AmpPresets } from './amp_custom_class/amp-presets.js'
+import { Eq_Fg } from './amp_custom_class/amp-eq.js'
+import { OcaSwitch } from 'aes70/src/controller/ControlClasses/OcaSwitch.js'
 
 export function updateA(self) {
 	self.setActionDefinitions({
@@ -158,6 +160,114 @@ export function updateA(self) {
 							.catch((err) => {
 								self.log('error', err.toString())
 							})
+					}
+				}
+			},
+		},
+		bypass_eq: {
+			name: 'EQ Off/On',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 1,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: [
+						{ id: 'eq1', label: 'EQ1' },
+						{ id: 'eq2', label: 'EQ2' },
+					],
+					default: 1,
+				},
+				{
+					id: 'bypass_eq',
+					type: 'checkbox',
+					label: 'ON/OFF',
+					default: false,
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					if (self.ampEQs[event.options.channel].eq1 instanceof OcaSwitch && self.ampEQs[event.options.channel].eq2 instanceof OcaSwitch) {
+						self.ampEQs[event.options.channel][event.options.eq].SetPosition(event.options.bypass_eq)
+					}
+				}
+			}
+		},
+		bypass_eq_band: {
+			name: 'EQ Band Off/On',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 1,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: [
+						{ id: 0, label: 'EQ1' },
+						{ id: 1, label: 'EQ2' },
+					],
+					default: 1,
+				},
+				{
+					id: 'eqband',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 1, label: '1' },
+						{ id: 2, label: '2' },
+						{ id: 3, label: '3' },
+						{ id: 4, label: '4' },
+						{ id: 5, label: '5' },
+						{ id: 6, label: '6' },
+						{ id: 7, label: '7' },
+						{ id: 8, label: '8' },
+						{ id: 9, label: '9' },
+						{ id: 10, label: '10' },
+						{ id: 11, label: '11' },
+						{ id: 12, label: '12' },
+						{ id: 13, label: '13' },
+						{ id: 14, label: '14' },
+						{ id: 15, label: '15' },
+						{ id: 16, label: '16' },
+
+					],
+					default: 1,
+				},
+				{
+					id: 'bypass_band',
+					type: 'checkbox',
+						label: 'ON/OFF',
+					default: false,
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					const bandID = event.options.eqband + ((event.options.eq*16) + (event.options.channel*32));
+					let key = "band_"+bandID;
+					self.log('info', 'Bypass Band: ' + key.toString())
+					if (self.ampEqAgents.get(key.toString()) instanceof Eq_Fg) {
+							self.ampEqAgents.get(key.toString()).SetBypass(event.options.bypass_band);
 					}
 				}
 			},
