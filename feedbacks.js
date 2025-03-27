@@ -1,5 +1,6 @@
 import { combineRgb } from '@companion-module/base'
 import { Types } from 'aes70'
+import { eqChoice } from './helper.js'
 export async function updateF(self) {
 	self.setFeedbackDefinitions({
 		ChannelState: {
@@ -42,6 +43,43 @@ export async function updateF(self) {
 			callback: (feedback) => {
 				if (self.ready) {
 					return self.powerState
+				}
+			},
+		},
+		EQState: {
+			name: 'Amp ´Channel EQ Bypass Feedback',
+			type: 'boolean',
+			label: 'EQ State',
+			defaultStyle: {
+				bgcolor: combineRgb(255, 0, 0),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [
+				{
+					id: 'ch',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ',
+					choices: eqChoice(self.config.type),
+					default: 1,
+				},
+			],
+			callback: (feedback) => {
+				if (self.ready) {
+					const eqCount = self.config.type === '5D' ? 1 : 2;
+					let index = (feedback.options.ch * eqCount) + feedback.options.eq;
+					return self.ampEQState[index];
 				}
 			},
 		},

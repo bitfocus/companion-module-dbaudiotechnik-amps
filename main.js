@@ -3,9 +3,12 @@ import { updateA } from './actions.js'
 import { updateF } from './feedbacks.js'
 import { updateV } from './variables.js'
 import { AmpPresets } from './amp_custom_class/amp-presets.js'
-import { Eq_Fg } from './amp_custom_class/amp-eq.js'
+import { OcaFilterDB } from './amp_custom_class/eq/OcaFilterDB.js'
 import { TCPConnection, RemoteDevice, RemoteControlClasses, Types } from 'aes70'
+import { initAmpEQStateArray } from './helper.js'
+
 class ModuleInstance extends InstanceBase {
+
 	constructor(internal) {
 		super(internal)
 	}
@@ -25,6 +28,7 @@ class ModuleInstance extends InstanceBase {
 		this.ampPresetAgent = {}
 		this.ampEqAgents = new Map();
 		this.ampEQs = new Map();
+		this.ampEQState = initAmpEQStateArray(this.type);
 		this.presetLast = undefined
 		this.ready = true
 		this.updateActions(InstanceStatus.Connecting)
@@ -51,6 +55,24 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
+	getEqPath(type) {
+		switch (type) {
+			case '5D':
+				return 'Config_Box'
+			default:
+				return 'Config'
+		}
+	}
+
+	getEqBandPath(type) {
+		switch (type) {
+			case '5D':
+				return 'Eq_Box/Eq_Data'
+			default:
+				return 'Eq/Eq_Fg'
+		}
+	}
+
 	getPortFromType(type) {
 		switch (type) {
 			case '5D':
@@ -70,6 +92,7 @@ class ModuleInstance extends InstanceBase {
 		this.powerHours = hours
 		this.setVariableValues({ amp_power_hours: this.powerHours })
 	}
+
 	setAmpPower(power, type) {
 		let powerType = false
 		switch (type) {
@@ -90,6 +113,26 @@ class ModuleInstance extends InstanceBase {
 		let varindex = `amp_mute_${index}`
 		this.setVariableValues({ [varindex]: mute })
 	}
+
+	setAmpEqBypass(ch, eq, bypass) {
+		this.log('debug', 'Setting EQ Bypass for ' + ch + ' ' + eq + ' to ' + bypass)
+		this.log('debug', JSON.stringify(this.ampEQState));
+		switch (eq) {
+			case 1:
+				this.log('debug', JSON.stringify(this.ampEQState[ch]));
+				this.ampEQState[ch].eq1 = bypass
+				break
+			case 2:
+				this.log('debug', JSON.stringify(this.ampEQState[ch]));
+				this.ampEQState[ch].eq2 = bypass
+				break
+		}
+		this.checkFeedbacks('EQState')
+		let varindex = `amp_ch_${ch}_eq_${eq}`
+		this.log("debug", "Setting EQ Bypass for " + varindex + " to " + bypass);
+		this.setVariableValues({ [varindex]: bypass })
+	}
+
 
 	readAmpPresetNames(map) {
 		if (this.type == '5D') {
@@ -153,6 +196,7 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
+
 	setAmpAPpreset(APpreset) {
 		// ap preset variables and feedback should get set here
 	}
@@ -198,7 +242,7 @@ class ModuleInstance extends InstanceBase {
 				})
 				if (this.ready) {
 					this.remoteDevice.add_control_classes([AmpPresets])
-					this.remoteDevice.add_control_classes([Eq_Fg])
+					this.remoteDevice.add_control_classes([OcaFilterDB])
 					this.updateActions() // export actions
 					this.updateFeedbacks() // export feedbacks
 					this.remoteDevice.DeviceManager.GetModelDescription().then((value) => {
@@ -217,16 +261,16 @@ class ModuleInstance extends InstanceBase {
 							})
 					})
 					this.remoteDevice.get_role_map().then((map) => {
-						if (map.get(this.getPowerHourPath(this.config.type))) {
+						if (map.get(this.getPowerHourPath(this.type))) {
 							this.intervalPower = setInterval(() => {
-								let powerh = map.get(this.getPowerHourPath(this.config.type))
+								let powerh = map.get(this.getPowerHourPath(this.type))
 								powerh.GetReading().then((v) => {
 									this.setAmpPowerHours(v.values[0])
 								})
 							}, 10000)
 						}
-						if (map.get(this.getPowerPath(this.config.type))) {
-							this.powerObj = map.get(this.getPowerPath(this.config.type))
+						if (map.get(this.getPowerPath(this.type))) {
+							this.powerObj = map.get(this.getPowerPath(this.type))
 							this.powerObj.GetPosition().then((v) => {
 								this.setAmpPower(v.item(0) === 0)
 								this.checkFeedbacks('PowerState')
@@ -237,30 +281,53 @@ class ModuleInstance extends InstanceBase {
 							})
 						}
 
-						const channelCount = 2;
-						for(let i = 1; i <= channelCount*2; i++) {
-							const eq1 = map.get('Config/Config_Eq1Enable' + i);
-							const eq2 = map.get('Config/Config_Eq2Enable' + i);
-								this.ampEQs.set(i,{eq1:eq1,eq2:eq2});
-						}
+						//Ch Count
+						const channelCount = 4;
+						//Eq Count
 						const eqCount = 2
-						const eqBandCount = 16;
-						let count = 1;
-						for(let chSplit = 0; chSplit < channelCount; chSplit++) {
-							for(let block = 0; block < channelCount; block++) {
-								for(let eq = 0; eq < eqCount; eq++) {
-									for(let eqBand = 0; eqBand < eqBandCount; eqBand++) {
-										let key = "Eq/Eq_Fg" + (((eq*64)+(chSplit*2)+block+(eqBand*4))+1);
-										const eqAgent = map.get(key.toString());
-										if (eqAgent) {
-											this.ampEqAgents.set("band_"+ count,eqAgent);
-										}
-										count++;
-									}
-								}
+						//Eq Band Count
+
+						let eqBandCount = this.config.type === '5D' ? 8 : 16;
+
+						for(let i = 1; i <= channelCount; i++) {
+							const eq1 = map.get(this.getEqPath(this.type) + '/Config_Eq1Enable' + i);
+							eq1.GetPosition().then((v) => {
+								this.setAmpEqBypass(i-1,1,v.item(0) === 0)
+								this.checkFeedbacks('EQState')
+							})
+							eq1.OnPositionChanged.subscribe((val) => {
+								this.setAmpEqBypass(i-1,1,val === 0)
+								this.checkFeedbacks('EQState')
+							});
+							if(this.config.type === '5D') {
+								this.ampEQs.set(i,{eq1:eq1});
+								continue;
 							}
+							const eq2 = map.get(this.getEqPath(this.type) + '/Config_Eq2Enable' + i);
+							eq2.GetPosition().then((v) => {
+								this.setAmpEqBypass(i-1,2,v.item(0) === 0)
+								this.checkFeedbacks('EQState')
+							})
+							eq2.OnPositionChanged.subscribe((val) => {
+								this.setAmpEqBypass(i-1,2,val === 0)
+								this.checkFeedbacks('EQState')
+							});
+							this.ampEQs.set(i,{eq1:eq1,eq2:eq2});
 						}
 
+						this.log("debug", "Found " + this.ampEQs.size + " EQs");
+
+						let count = 1
+
+						for(let chSplit = 0; chSplit < (channelCount * eqCount *  eqBandCount); chSplit++) {
+							let key = this.getEqBandPath(this.type) + count;
+							const eqAgent = map.get(key.toString())
+							if (eqAgent) {
+								this.log("debug", "band_"+count)
+								this.ampEqAgents.set("band_"+ count,eqAgent);
+							}
+							count++;
+						}
 
 						this.log("debug", "Found " + this.ampEqAgents.size + " EQ Agents");
 

@@ -1,7 +1,10 @@
 import { Types, RemoteControlClasses } from 'aes70'
 import { AmpPresets } from './amp_custom_class/amp-presets.js'
-import { Eq_Fg } from './amp_custom_class/amp-eq.js'
+import { OcaFilterDB } from './amp_custom_class/eq/OcaFilterDB.js'
 import { OcaSwitch } from 'aes70/src/controller/ControlClasses/OcaSwitch.js'
+import { eqBandChoice, eqBandToObjKey, eqChoice, eqChoiceByPass } from './helper.js'
+import { OcaDBEQShape } from './amp_custom_class/eq/types/OcaDBEQShape.js'
+import { OcaDBEQSlope } from './amp_custom_class/eq/types/OcaDBEQSlope.js'
 
 export function updateA(self) {
 	self.setActionDefinitions({
@@ -183,11 +186,8 @@ export function updateA(self) {
 					id: 'eq',
 					type: 'dropdown',
 					label: 'EQ Number',
-					choices: [
-						{ id: 'eq1', label: 'EQ1' },
-						{ id: 'eq2', label: 'EQ2' },
-					],
-					default: 1,
+					choices: eqChoiceByPass(self.type),
+					default: 'eq1',
 				},
 				{
 					id: 'bypass_eq',
@@ -217,41 +217,20 @@ export function updateA(self) {
 						{ id: 2, label: 'C' },
 						{ id: 3, label: 'D' },
 					],
-					default: 1,
+					default: 0,
 				},
 				{
 					id: 'eq',
 					type: 'dropdown',
 					label: 'EQ Number',
-					choices: [
-						{ id: 0, label: 'EQ1' },
-						{ id: 1, label: 'EQ2' },
-					],
-					default: 1,
+					choices: eqChoice(self.type),
+					default: 0,
 				},
 				{
 					id: 'eqband',
 					type: 'dropdown',
 					label: 'Channel',
-					choices: [
-						{ id: 1, label: '1' },
-						{ id: 2, label: '2' },
-						{ id: 3, label: '3' },
-						{ id: 4, label: '4' },
-						{ id: 5, label: '5' },
-						{ id: 6, label: '6' },
-						{ id: 7, label: '7' },
-						{ id: 8, label: '8' },
-						{ id: 9, label: '9' },
-						{ id: 10, label: '10' },
-						{ id: 11, label: '11' },
-						{ id: 12, label: '12' },
-						{ id: 13, label: '13' },
-						{ id: 14, label: '14' },
-						{ id: 15, label: '15' },
-						{ id: 16, label: '16' },
-
-					],
+					choices: eqBandChoice(self.type),
 					default: 1,
 				},
 				{
@@ -263,14 +242,74 @@ export function updateA(self) {
 			],
 			callback: async (event) => {
 				if (self.ready) {
-					const bandID = event.options.eqband + ((event.options.eq*16) + (event.options.channel*32));
-					let key = "band_"+bandID;
-					self.log('info', 'Bypass Band: ' + key.toString())
-					if (self.ampEqAgents.get(key.toString()) instanceof Eq_Fg) {
+					const bandCount = self.config.type === '5D' ? 8 : 16;
+					const channelOffset = bandCount *2;
+					const bandID = event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset);
+					self.log("debug",event.options.eqband + " : "+ event.options.eq + " : " + event.options.channel + " : " + bandCount);
+					let key = eqBandToObjKey(bandID, self.type);
+					self.log("debug",key);
+					if (self.ampEqAgents.get(key.toString()) !== undefined) {
 							self.ampEqAgents.get(key.toString()).SetBypass(event.options.bypass_band);
 					}
 				}
 			},
+		},
+		clear_eq_band: {
+			name: 'EQ Clear Band',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: eqChoice(self.type),
+					default: 0,
+				},
+				{
+					id: 'eqband',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: eqBandChoice(self.type),
+					default: 1,
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+						self.log("debug","yes")
+						const bandCount = self.config.type === '5D' ? 8 : 16;
+						const channelOffset = bandCount *2;
+						const bandID = event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset);
+						self.log("debug",event.options.eqband + " : "+ event.options.eq + " : " + event.options.channel + " : " + bandCount);
+						self.log("debug",event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset));
+
+						let key = eqBandToObjKey(bandID, self.type);
+						self.log("debug",key);
+						const eq = self.ampEqAgents.get(key.toString());
+						if (eq instanceof OcaFilterDB) {
+							eq.SetBypass(false);
+							eq.SetShape(OcaDBEQShape.PEQ);
+							eq.SetPreFrequency(1000)
+							eq.SetInbandGain(0)
+							eq.SetWidthParameter(0.70)
+							eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+							eq.SetSecFrequency(2000);
+							eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+						}else {
+							self.log("warn", "EQ band not found");
+						}
+				}
+			}
 		},
 		toggelmute_action: {
 			name: 'Toggle Amp Channel',

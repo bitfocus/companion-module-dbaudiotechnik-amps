@@ -9,6 +9,10 @@ export async function updateV(self) {
 		{ variableId: 'amp_mute_1', name: 'Amp Mute Ch2' },
 		{ variableId: 'amp_mute_2', name: 'Amp Mute Ch3' },
 		{ variableId: 'amp_mute_3', name: 'Amp Mute Ch4' },
+		{ variableId: 'amp_ch_0_eq_1', name: 'Amp EQBypass Ch1 EQ1' },
+		{ variableId: 'amp_ch_1_eq_1', name: 'Amp EQBypass Ch2 EQ1' },
+		{ variableId: 'amp_ch_2_eq_1', name: 'Amp EQBypass Ch3 EQ1' },
+		{ variableId: 'amp_ch_3_eq_1', name: 'Amp EQBypass Ch4 EQ1' },
 	]
 
 	if (self.type != '5D') {
@@ -44,6 +48,10 @@ export async function updateV(self) {
 			{ variableId: 'amp_preset_state_13', name: 'Amp Preset State Backup 1' },
 			{ variableId: 'amp_preset_state_14', name: 'Amp Preset State Backup 2' },
 			{ variableId: 'amp_preset_state_15', name: 'Amp Preset State Backup 3' },
+			{ variableId: 'amp_ch_0_eq_2', name: 'Amp EQBypass Ch1 EQ2' },
+			{ variableId: 'amp_ch_1_eq_2', name: 'Amp EQBypass Ch2 EQ2' },
+			{ variableId: 'amp_ch_2_eq_2', name: 'Amp EQBypass Ch3 EQ2' },
+			{ variableId: 'amp_ch_3_eq_2', name: 'Amp EQBypass Ch4 EQ2' },
 		)
 	}
 
