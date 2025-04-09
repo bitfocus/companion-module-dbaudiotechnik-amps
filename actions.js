@@ -1,10 +1,19 @@
 import { Types, RemoteControlClasses } from 'aes70'
 import { AmpPresets } from './amp_custom_class/amp-presets.js'
 import { OcaFilterDB } from './amp_custom_class/eq/OcaFilterDB.js'
-import { OcaSwitch } from 'aes70/src/controller/ControlClasses/OcaSwitch.js'
-import { eqBandChoice, eqBandToObjKey, eqChoice, eqChoiceByPass } from './helper.js'
+import {
+	eqBandChoice,
+	eqBandToObjKey,
+	eqChoice,
+	eqChoiceByPass,
+	eqSlope,
+	eqType,
+	filterEQData,
+	isJSON
+} from './helper.js'
 import { OcaDBEQShape } from './amp_custom_class/eq/types/OcaDBEQShape.js'
 import { OcaDBEQSlope } from './amp_custom_class/eq/types/OcaDBEQSlope.js'
+
 
 export function updateA(self) {
 	self.setActionDefinitions({
@@ -82,7 +91,7 @@ export function updateA(self) {
 			},
 		},
 		mute_action: {
-			name: 'Mute Amp Channel',
+			name: 'Mute Channel',
 			options: [
 				{
 					id: 'mute',
@@ -125,7 +134,7 @@ export function updateA(self) {
 			},
 		},
 		unmute_action: {
-			name: 'Unmute Amp Channel',
+			name: 'Unmute Channel',
 			options: [
 				{
 					id: 'unmute',
@@ -229,7 +238,7 @@ export function updateA(self) {
 				{
 					id: 'eqband',
 					type: 'dropdown',
-					label: 'Channel',
+					label: 'Band',
 					choices: eqBandChoice(self.type),
 					default: 1,
 				},
@@ -286,13 +295,11 @@ export function updateA(self) {
 			],
 			callback: async (event) => {
 				if (self.ready) {
-						self.log("debug","yes")
 						const bandCount = self.config.type === '5D' ? 8 : 16;
 						const channelOffset = bandCount *2;
 						const bandID = event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset);
 						self.log("debug",event.options.eqband + " : "+ event.options.eq + " : " + event.options.channel + " : " + bandCount);
 						self.log("debug",event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset));
-
 						let key = eqBandToObjKey(bandID, self.type);
 						self.log("debug",key);
 						const eq = self.ampEqAgents.get(key.toString());
@@ -311,8 +318,411 @@ export function updateA(self) {
 				}
 			}
 		},
+		clear_eq: {
+			name: 'EQ Clear',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: eqChoice(self.type),
+					default: 0,
+				}
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					const bandCount = self.config.type === '5D' ? 8 : 16;
+					const channelOffset = bandCount *2;
+					const bandID = 1 + (event.options.eq*bandCount) + (event.options.channel* channelOffset);
+
+					for(let band = 0; band < bandCount; band++){
+						let key = eqBandToObjKey(bandID+ band, self.type);
+						self.log("debug",key);
+						const eq = self.ampEqAgents.get(key.toString());
+						if (eq instanceof OcaFilterDB) {
+							eq.SetBypass(false);
+							eq.SetShape(OcaDBEQShape.PEQ);
+							eq.SetPreFrequency(1000)
+							eq.SetInbandGain(0)
+							eq.SetWidthParameter(0.70)
+							eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+							eq.SetSecFrequency(2000);
+							eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+						}else {
+							self.log("warn", "EQ band not found");
+						}
+					}
+
+				}
+			}
+		},
+		eq_set_band:{
+			name: 'EQ Set Band',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: eqChoice(self.type),
+					default: 0,
+				},
+				{
+					id: 'eqband',
+					type: 'dropdown',
+					label: 'Band',
+					choices: eqBandChoice(self.type),
+					default: 1,
+				},
+				{
+					id: 'bypass_band',
+					type: 'checkbox',
+					label: 'ON/OFF',
+					default: false
+				},
+				{
+					id: 'type',
+					type: 'dropdown',
+					label: 'Type',
+					choices: eqType(),
+					default: 1
+				},
+				{
+					id: 'freq1',
+					type: 'number',
+					label: 'Frequency 1',
+					min: 20,
+					max: 20000,
+					default: 1000
+				},
+				{
+					id: 'freq2',
+					type: 'number',
+					label: 'Frequency 2',
+					min: 20,
+					max: 20000,
+					default: 2000,
+					isVisible: (options) => {
+						return options.type === 5;
+
+					}
+				},
+				{
+					id: 'q',
+					type: 'number',
+					label: 'Q',
+					min: 0.50,
+					max: 25,
+					default: 0.70,
+					isVisible: (options) => {
+						return options.type === 1 || options.type === 2;
+
+					}
+				},
+				{
+					id: 'slope1',
+					type: 'dropdown',
+					choices: eqSlope(),
+					label: 'Slope 1',
+					default: 1,
+					isVisible: (options) => {
+						return options.type === 3 || options.type === 4 || options.type === 5;
+					}
+				},
+				{
+					id: 'slope2',
+					type: 'dropdown',
+					choices: eqSlope(),
+					label: 'Slope 2',
+					default: 1,
+					isVisible: (options) => {
+						return options.type === 5
+					}
+				},
+				{
+					id: 'gain',
+					type: 'number',
+					label: 'Gain',
+					min: -18,
+					max: 12,
+					default: 0,
+					isVisible: (options) => {
+						return options.type !== 2;
+
+					}
+				}
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					const bandCount = self.config.type === '5D' ? 8 : 16;
+					const channelOffset = bandCount *2;
+					const bandID = event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset);
+					self.log("debug",event.options.eqband + " : "+ event.options.eq + " : " + event.options.channel + " : " + bandCount);
+					self.log("debug",event.options.eqband + (event.options.eq*bandCount) + (event.options.channel* channelOffset));
+					let key = eqBandToObjKey(bandID, self.type);
+					self.log("debug",key);
+					const eq = self.ampEqAgents.get(key.toString());
+					if (eq instanceof OcaFilterDB) {
+						eq.SetBypass(event.options.bypass_band);
+						switch (event.options.type) {
+							case 1:
+								self.log("debug", "PEQ");
+								eq.SetShape(OcaDBEQShape.PEQ);
+								eq.SetPreFrequency(event.options.freq1);
+								eq.SetWidthParameter(event.options.q);
+								eq.SetInbandGain(event.options.gain);
+								eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+								eq.SetSecFrequency(2000);
+								eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+								break;
+							case 2:
+								self.log("debug", "Notch");
+								eq.SetShape(OcaDBEQShape.Notch);
+								eq.SetPreFrequency(event.options.freq1);
+								eq.SetWidthParameter(event.options.q);
+								eq.SetInbandGain(0);
+								eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+								eq.SetSecFrequency(2000);
+								eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+								break;
+							case 3:
+								self.log("debug", "LowShelv");
+								eq.SetShape(OcaDBEQShape.LowShelv);
+								eq.SetPreFrequency(event.options.freq1);
+								eq.SetWidthParameter(0.7);
+								eq.SetInbandGain(event.options.gain);
+								eq.SetPreSlope(event.options.slope1);
+								eq.SetSecFrequency(2000);
+								eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+								break;
+							case 4:
+								self.log("debug", "HighShelv");
+								eq.SetShape(OcaDBEQShape.HighShelv);
+								eq.SetPreFrequency(event.options.freq1);
+								eq.SetWidthParameter(0.7);
+								eq.SetInbandGain(event.options.gain);
+								eq.SetPreSlope(event.options.slope1);
+								eq.SetSecFrequency(2000);
+								eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+								break;
+							case 5:
+								self.log("debug", "Asymetric");
+								eq.SetShape(OcaDBEQShape.Asymetric);
+								eq.SetPreFrequency(event.options.freq1);
+								eq.SetWidthParameter(0.7);
+								eq.SetInbandGain(event.options.gain);
+								eq.SetPreSlope(event.options.slope1);
+								eq.SetSecFrequency(event.options.freq2);
+								eq.SetSecSlope(event.options.slope2);
+								break;
+						}
+					}else {
+						self.log("warn", "EQ band not found");
+					}
+
+				}
+			}
+		},
+		eq_set: {
+			name: 'EQ Set All Bands',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'eq',
+					type: 'dropdown',
+					label: 'EQ Number',
+					choices: eqChoice(self.type),
+					default: 0,
+				},
+				{
+					id: 'eqData',
+					type: 'textinput',
+					label: 'EQ Data',
+					required: true,
+					default: []
+				}
+			],
+			callback: async (event) => {
+				if (!self.ready) {
+					return
+				}
+				if (!isJSON(event.options.eqData)) {
+					self.log('warn', 'Invalid JSON data')
+					return
+				}
+				const data = JSON.parse(event.options.eqData)
+				if (!Array.isArray(data)) {
+					self.log('warn', 'Invalid JSON data')
+					return
+				}
+				const bandCount = self.config.type === '5D' ? 8 : 16;
+				const eqData = filterEQData(self, data);
+				const channelOffset = bandCount *2;
+				const bandID = (event.options.eq*bandCount) + (event.options.channel* channelOffset);
+				self.log("debug","yes");
+				self.log(eqData);
+				eqData.forEach((item) => {
+						let key = eqBandToObjKey(bandID +item.band, self.type);
+						self.log("debug",key);
+						const eq = self.ampEqAgents.get(key.toString());
+						if (eq instanceof OcaFilterDB) {
+							eq.SetBypass(item.bypass);
+							switch (item.type) {
+								case 1:
+									self.log("debug", "PEQ");
+									eq.SetShape(OcaDBEQShape.PEQ);
+									eq.SetPreFrequency(item.freq1);
+									eq.SetWidthParameter(item.q);
+									eq.SetInbandGain(item.gain);
+									eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+									eq.SetSecFrequency(2000);
+									eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+									break;
+								case 2:
+									self.log("debug", "Notch");
+									eq.SetShape(OcaDBEQShape.Notch);
+									eq.SetPreFrequency(item.freq1);
+									eq.SetWidthParameter(item.q);
+									eq.SetInbandGain(0);
+									eq.SetPreSlope(OcaDBEQSlope.SIX_dB);
+									eq.SetSecFrequency(2000);
+									eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+									break;
+								case 3:
+									self.log("debug", "LowShelv");
+									eq.SetShape(OcaDBEQShape.LowShelv);
+									eq.SetPreFrequency(item.freq1);
+									eq.SetWidthParameter(0.7);
+									eq.SetInbandGain(item.gain);
+									eq.SetPreSlope(item.slope1);
+									eq.SetSecFrequency(2000);
+									eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+									break;
+								case 4:
+									self.log("debug", "HighShelv");
+									eq.SetShape(OcaDBEQShape.HighShelv);
+									eq.SetPreFrequency(item.freq1);
+									eq.SetWidthParameter(0.7);
+									eq.SetInbandGain(item.gain);
+									eq.SetPreSlope(item.slope1);
+									eq.SetSecFrequency(2000);
+									eq.SetSecSlope(OcaDBEQSlope.SIX_dB);
+									break;
+								case 5:
+									self.log("debug", "Asymetric");
+									eq.SetShape(OcaDBEQShape.Asymetric);
+									eq.SetPreFrequency(item.freq1);
+									eq.SetWidthParameter(0.7);
+									eq.SetInbandGain(item.gain);
+									eq.SetPreSlope(item.slope1);
+									eq.SetSecFrequency(item.freq2);
+									eq.SetSecSlope(item.slope2);
+									break;
+							}
+						}else {
+							self.log("warn", "EQ band not found");
+						}
+				});
+			}
+		},
+		bypass_delay: {
+			name: 'Delay ON/OFF',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 1,
+				},
+				{
+					id: 'bypass_delay',
+					type: 'checkbox',
+					label: 'ON/OFF',
+					default: false,
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					if (self.ampDelayStateObjs[event.options.channel] !== undefined) {
+						self.ampDelayStateObjs[event.options.channel].SetPosition(event.options.bypass_delay);
+					}
+				}
+			}
+		},
+		set_delay: {
+			name: 'Delay Set',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 1,
+				},
+				{
+					id: 'delay',
+					type: 'number',
+					label: 'Delay Time (ms)',
+					default: 0.3,
+					min: 0.3,
+					max: 10000
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					if (self.ampDelays[event.options.channel] !== undefined) {
+						self.ampDelays[event.options.channel].SetSetting(event.options.delay);
+					}
+				}
+			}
+		},
 		toggelmute_action: {
-			name: 'Toggle Amp Channel',
+			name: 'Toggle Mute Channel',
 			options: [
 				{
 					id: 'togglemute',

@@ -43,6 +43,15 @@ export let OcaFilterDB = define_custom_class(
 		['SetSecSlope', 4, 18, [OcaDBEQSlope], []],
 		['SetBypass', 4, 20, [OcaInt8], [OcaInt8]],
 	],
-	[],
+	[
+		['PreFrequency', [OcaFloat32], 4, 1, false, false, null],
+		['Shape', [OcaDBEQShape], 4, 2, false, false, null],
+		['WidthParameter', [OcaFloat32], 4, 3, false, false, ['Q']],
+		['InbandGain', [OcaFloat32], 4, 4, false, false, null],
+		['PreSlope', [OcaDBEQSlope], 4, 5, false, false, null],
+		['SeqFrequency', [OcaFloat32], 4, 6, false, false, null],
+		['SecSlope', [OcaDBEQSlope], 4, 9, false, false, null],
+		['Bypass', [OcaInt8], 4, 10, false, false, null],
+	],
 	[],
 )

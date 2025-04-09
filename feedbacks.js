@@ -83,6 +83,34 @@ export async function updateF(self) {
 				}
 			},
 		},
+		DelayState: {
+			name: 'Amp ´Channel Delay Bypass Feedback',
+			type: 'boolean',
+			label: 'Delay Bypass',
+			defaultStyle: {
+				bgcolor: combineRgb(202, 112, 24),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [
+				{
+					id: 'ch',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+			],
+			callback: (feedback) => {
+				if (self.ready) {
+					return self.ampDelayStates[feedback.options.ch];
+				}
+			},
+		},
 		LastAmpPreset: {
 			name: 'Last Amp Preset Recall',
 			type: 'boolean',
