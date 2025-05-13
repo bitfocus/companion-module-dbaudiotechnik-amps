@@ -16,17 +16,17 @@ export function initAmpEQStateArray(type) {
 				]
 		}
 }
-export function eqType(type) {
+export function eqType() {
 	return [
 		{ id: 1, label: 'PEQ' },
 		{ id: 2, label: 'Notch' },
-		{ id: 3, label: 'LowShelv' },
-		{ id: 4, label: 'HighShelv' },
+		{ id: 3, label: 'LowShelf' },
+		{ id: 4, label: 'HighShelf' },
 		{ id: 5, label: 'Asymetric' }
 	]
 }
 
-export function eqSlope(type) {
+export function eqSlope() {
 	return [
 		{ id: 1, label: '6dB/oct' },
 		{ id: 2, label: '12dB/oct' },

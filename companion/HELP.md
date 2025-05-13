@@ -19,7 +19,7 @@ Specify the IP address of the amp you want to connect to.
 - Select Array Processing Preset for Channel A/B/C/D/All **(only for D20, other amplifiers will follow)**
 - Recall AmpPreset **(not for 5D)**
 - Eq Bypass On/Off
-- Eq Bypass Band On/Off 
+- Eq Bypass Band On/Off
 - Eq Clear Band
 - Eq Clear All Bands
 - Eq Set Band Parametric
@@ -57,3 +57,60 @@ Specify the IP address of the amp you want to connect to.
 - Amp Channel Eq Bypass A/B/C/D
 - Amp Channel Delay Bypass A/B/C/D
 
+### EQ All JSON Format
+- Band  1 to 16 (5D only 1 to 8)
+- Type 1 to 5
+  (1 = Parametric
+  2 = Notch
+  3 = Low Shelf
+  4 = High Shelf
+  5 = Asymetric)
+- Frequency in Hz 20 to 20000
+- Gain in dB -18 to 12
+- Q 0.5 to 25
+- Slope 1 to 4
+  (1 = 6dB/Oct
+  2 = 12dB/Oct
+  3 = 18dB/Oct
+  4 = 24dB/Oct)
+
+```json
+[
+  {
+    "band": 1,
+    "type": 1,
+    "freq1": 100,
+    "gain": -3,
+    "q": 1.5
+  },
+  {
+    "band": 2,
+    "type": 2,
+    "freq1": 100,
+    "q": 1.5
+  },
+  {
+    "band": 3,
+    "type": 3,
+    "freq1": 100,
+    "slope1": 1,
+    "gain": -3
+  },
+  {
+    "band": 4,
+    "type": 4,
+    "freq1": 100,
+    "slope1": 1,
+    "gain": -3
+  },
+  {
+    "band": 4,
+    "type": 4,
+    "freq1": 100,
+    "freq2": 200,
+    "slope1": 1,
+    "slope2": 2,
+    "gain": -3
+  }
+]
+```
