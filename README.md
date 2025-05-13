@@ -27,3 +27,5 @@ Updates
 1.0.1 - Name changed to companion-module-dbaudiotechnik-amps to adapt to other modules from d&b audiotechni
 <br>
 1.0.2 - Update HELP.md Note that some actions still need to be tested removed. Testing completed!
+<br>
+1.1.0 - Add EQ Control | Delay Control | Input Gain Bypass | Channel Level Set 
