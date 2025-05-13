@@ -596,6 +596,9 @@ export function updateA(self) {
 				self.log("debug","yes");
 				self.log(eqData);
 				eqData.forEach((item) => {
+						if(item.band > bandCount){
+							return;
+						}
 						let key = eqBandToObjKey(bandID +item.band, self.type);
 						self.log("debug",key);
 						const eq = self.ampEqAgents.get(key.toString());
@@ -672,7 +675,7 @@ export function updateA(self) {
 						{ id: 2, label: 'C' },
 						{ id: 3, label: 'D' },
 					],
-					default: 1,
+					default: 0,
 				},
 				{
 					id: 'bypass_delay',
@@ -683,9 +686,7 @@ export function updateA(self) {
 			],
 			callback: async (event) => {
 				if (self.ready) {
-					if (self.ampDelayStateObjs[event.options.channel] !== undefined) {
-						self.ampDelayStateObjs[event.options.channel].SetPosition(event.options.bypass_delay);
-					}
+						self.setAmpDelayState(event.options.channel, event.options.bypass_delay)
 				}
 			}
 		},
@@ -702,7 +703,7 @@ export function updateA(self) {
 						{ id: 2, label: 'C' },
 						{ id: 3, label: 'D' },
 					],
-					default: 1,
+					default: 0,
 				},
 				{
 					id: 'delay',
@@ -715,9 +716,53 @@ export function updateA(self) {
 			],
 			callback: async (event) => {
 				if (self.ready) {
-					if (self.ampDelays[event.options.channel] !== undefined) {
-						self.ampDelays[event.options.channel].SetSetting(event.options.delay);
-					}
+					self.setAmpDelay(event.options.channel, event.options.delay);
+				}
+			}
+		},
+		set_level: {
+			name: 'Set Channel Level',
+			options: [
+				{
+					id: 'channel',
+					type: 'dropdown',
+					label: 'Channel',
+					choices: [
+						{ id: 0, label: 'A' },
+						{ id: 1, label: 'B' },
+						{ id: 2, label: 'C' },
+						{ id: 3, label: 'D' },
+					],
+					default: 0,
+				},
+				{
+					id: 'Level',
+					type: 'number',
+					label: 'Level (dB)',
+					default: 0.0,
+					min: -57.5,
+					max: 6.010
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					self.setAmpChannelLevel(event.options.channel, event.options.Level);
+				}
+			}
+		},
+		set_inputgain_enable: {
+			name: 'Input Gain Enable',
+			options: [
+				{
+					id: 'bypass_gain',
+					type: 'checkbox',
+					label: 'ON/OFF',
+					default: false,
+				},
+			],
+			callback: async (event) => {
+				if (self.ready) {
+					self.setAmpInputGainEnable(event.options.bypass_gain);
 				}
 			}
 		},

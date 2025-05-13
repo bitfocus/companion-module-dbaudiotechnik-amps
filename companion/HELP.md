@@ -24,8 +24,10 @@ Specify the IP address of the amp you want to connect to.
 - Eq Clear All Bands
 - Eq Set Band Parametric
 - Eq Set All Bands Parametric
+- Set Level Channel A/B/C/D
 - Delay Set
 - Delay Bypass ON/OFF
+- Input Gain Enabled/Disabled
 
 
 ### Available Variables for d&b audiotechnik Amps
@@ -37,13 +39,15 @@ Specify the IP address of the amp you want to connect to.
 - Mute State Channel A/B/C/D
 - Amp Preset Names **(not for 5D)**
 - Amp Preset States **(not for 5D)**
-- Amp Preset Last (Last Recall) **(not for 5D)**
+- Amp Preset Last Recall **(not for 5D)**
 - Eq Bypass State
 - Delay Bypass State
 - Delay (UNIT: ms)
+- Level Channel A/B/C/D
 - Speaker ID per Channel
 - Speaker Name per Channel
 - Speaker Types
+- Input Gain Enabled/Disabled
 
 ### Available Feedbacks for d&b audiotechnik Amps
 

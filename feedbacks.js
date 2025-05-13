@@ -111,6 +111,21 @@ export async function updateF(self) {
 				}
 			},
 		},
+		InputGainEnable: {
+			name: 'Amp Input Gain Enable Feedback',
+			type: 'boolean',
+			label: 'Input Gain Enable',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 104, 153),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [],
+			callback: (feedback) => {
+				if (self.ready) {
+					return self.ampInputGainState;
+				}
+			},
+		},
 		LastAmpPreset: {
 			name: 'Last Amp Preset Recall',
 			type: 'boolean',

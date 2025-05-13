@@ -25,6 +25,7 @@ class ModuleInstance extends InstanceBase {
 		this.powerObj = {}
 		this.presetNames = []
 		this.presetStates = []
+		this.channellevel = []
 		this.ampPresetAgent = {}
 		this.ampEqAgents = new Map();
 		this.ampEQs = new Map();
@@ -32,6 +33,8 @@ class ModuleInstance extends InstanceBase {
 		this.ampDelayStateObjs = [];
 		this.ampDelayStates = [false, false, false, false]
 		this.ampEQState = initAmpEQStateArray(this.type);
+		this.ampInputGainStateObj = {}
+		this.ampInputGainState = false
 		this.ampSpeakerIDNames = [];
 		this.ampChannelSpeakerID = [0,0,0,0];
 		this.presetLast = undefined
@@ -60,12 +63,21 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	getEqPath(type) {
+	getConfigPath(type) {
 		switch (type) {
 			case '5D':
 				return 'Config_Box'
 			default:
 				return 'Config'
+		}
+	}
+
+	getSettingsPath(type) {
+		switch (type) {
+			case '5D':
+				return 'Settings_Box'
+			default:
+				return 'Settings'
 		}
 	}
 
@@ -146,6 +158,26 @@ class ModuleInstance extends InstanceBase {
 		this.ampDelayStateObjs[ch].SetPosition(state).then((v) => {
 			let varindex = `amp_delay_bypass_ch_${ch}`
 			this.setVariableValues({ [varindex]: state })
+		});
+	}
+
+	setAmpChannelLevel(ch, level) {
+		this.log('debug', 'Setting Channel Level for ' + ch + ' to ' + level)
+		this.channellevel[ch].SetGain(level).then((v) => {
+			let varindex = `amp_channel_level_${ch}`
+			this.setVariableValues({ [varindex]: level })
+		});
+	}
+
+	setAmpInputGainEnable(state) {
+		this.log('debug', 'Setting Input Gain Enable to ' + state)
+		this.ampInputGainStateObj.SetPosition(state).then((v) => {
+			let varindex = `amp_input_gain_enable`
+			this.ampInputGainState = state;
+			this.setVariableValues({ [varindex]: state })
+			this.checkFeedbacks('InputGainEnable')
+		}).catch((err) => {
+			this.log("error", JSON.stringify(err))
 		});
 	}
 
@@ -270,6 +302,33 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
+	readAmpChannelLevel(map) {
+		for (let i = 1; i <= 4; i++) {
+			const channel = map.get(this.getConfigPath(this.type) +'/Config_PotiLevel' + i)
+			this.channellevel.push(channel);
+			channel.GetGain().then((v) => {
+				this.setVariableValues({ [`amp_channel_level_${i}`]: v.item(0) })
+			})
+			channel.OnGainChanged.subscribe((v) => {
+				this.setVariableValues({ [`amp_channel_level_${i}`]: v })
+			})
+		}
+	}
+
+	readAmpInputGainEnable(map) {
+		const inputgain = map.get(this.getSettingsPath(this.type) + '/Settings_InputGainEnable')
+		this.ampInputGainStateObj = inputgain
+		inputgain.GetPosition().then((v) => {
+			this.setVariableValues({ amp_input_gain_enable: v.item(0) === 1 })
+			this.ampInputGainState = v.item(0) === 1;
+			this.checkFeedbacks('InputGainEnable')
+		})
+		inputgain.OnPositionChanged.subscribe((v) => {
+			this.setVariableValues({ amp_input_gain_enable: v === 1 })
+			this.ampInputGainState = v === 1;
+			this.checkFeedbacks('InputGainEnable')
+		})
+	}
 
 	setAmpAPpreset(APpreset) {
 		// ap preset variables and feedback should get set here
@@ -315,10 +374,15 @@ class ModuleInstance extends InstanceBase {
 					}, 10000)
 				})
 				if (this.ready) {
+
+					// Add custom classes
 					this.remoteDevice.add_control_classes([AmpPresets])
 					this.remoteDevice.add_control_classes([OcaFilterDB])
+					//===================
+
 					this.updateActions() // export actions
 					this.updateFeedbacks() // export feedbacks
+
 					this.remoteDevice.DeviceManager.GetModelDescription().then((value) => {
 						this.info['type'] = value.Name
 						this.info['version'] = value.Version
@@ -339,6 +403,11 @@ class ModuleInstance extends InstanceBase {
 						this.readAmpSpeakerIDs(map);
 						this.readAmpDelay(map);
 						this.readAmpDelayState(map);
+						this.readAmpChannelLevel(map);
+						this.readAmpInputGainEnable(map);
+						this.readAmpPresetNames(map)
+						this.readAmpPresetStates(map)
+						this.readAmpPresetLastReCall(map)
 						if (map.get(this.getPowerHourPath(this.type))) {
 							this.intervalPower = setInterval(() => {
 								let powerh = map.get(this.getPowerHourPath(this.type))
@@ -368,7 +437,7 @@ class ModuleInstance extends InstanceBase {
 						let eqBandCount = this.config.type === '5D' ? 8 : 16;
 
 						for(let i = 1; i <= channelCount; i++) {
-							const eq1 = map.get(this.getEqPath(this.type) + '/Config_Eq1Enable' + i);
+							const eq1 = map.get(this.getConfigPath(this.type) + '/Config_Eq1Enable' + i);
 							eq1.GetPosition().then((v) => {
 								this.setAmpEqBypass(i-1,1,v.item(0) === 0)
 								this.checkFeedbacks('EQState')
@@ -381,7 +450,7 @@ class ModuleInstance extends InstanceBase {
 								this.ampEQs.set(i,{eq1:eq1});
 								continue;
 							}
-							const eq2 = map.get(this.getEqPath(this.type) + '/Config_Eq2Enable' + i);
+							const eq2 = map.get(this.getConfigPath(this.type) + '/Config_Eq2Enable' + i);
 							eq2.GetPosition().then((v) => {
 								this.setAmpEqBypass(i-1,2,v.item(0) === 0)
 								this.checkFeedbacks('EQState')
@@ -411,10 +480,6 @@ class ModuleInstance extends InstanceBase {
 						if (this.type !== '5D') {
 							this.ampPresetAgent = map.get('AmpPresets')
 						}
-
-						this.readAmpPresetNames(map)
-						this.readAmpPresetStates(map)
-						this.readAmpPresetLastReCall(map)
 
 					})
 					this.remoteDevice.get_device_tree().then((tree) => {

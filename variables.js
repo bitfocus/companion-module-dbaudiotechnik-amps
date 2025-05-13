@@ -30,6 +30,15 @@ export async function updateV(self) {
 		{ variableId: 'amp_speaker_name_ch_2', name: 'Speaker Name Ch3' },
 		{ variableId: 'amp_speaker_name_ch_3', name: 'Speaker Name Ch4' },
 		{ variableId: 'amp_speaker_names', name: 'Speaker Types' },
+		{ variableId: 'amp_channel_level_1', name: 'Channel Level 1' },
+		{ variableId: 'amp_channel_level_2', name: 'Channel Level 2' },
+		{ variableId: 'amp_channel_level_3', name: 'Channel Level 3' },
+		{ variableId: 'amp_channel_level_4', name: 'Channel Level 4' },
+		{ variableId: 'amp_input_gain_enable', name: 'Input Gain Enable' },
+		{ variableId: 'amp_input_gain_ch_0', name: 'Input Gain Ch1' },
+		{ variableId: 'amp_input_gain_ch_1', name: 'Input Gain Ch2' },
+		{ variableId: 'amp_input_gain_ch_2', name: 'Input Gain Ch3' },
+		{ variableId: 'amp_input_gain_ch_3', name: 'Input Gain Ch4' },
 	]
 
 	if (self.type != '5D') {
