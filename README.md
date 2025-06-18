@@ -29,3 +29,5 @@ Updates
 1.0.2 - Update HELP.md Note that some actions still need to be tested removed. Testing completed!
 <br>
 1.1.0 - Add EQ Control | Delay Control | Input Gain Bypass | Channel Level Set 
+<br>
+1.1.1 - Fix Dealy readout and set (5D)

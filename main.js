@@ -5,7 +5,7 @@ import { updateV } from './variables.js'
 import { AmpPresets } from './amp_custom_class/amp-presets.js'
 import { OcaFilterDB } from './amp_custom_class/eq/OcaFilterDB.js'
 import { TCPConnection, RemoteDevice, RemoteControlClasses, Types } from 'aes70'
-import { initAmpEQStateArray } from './helper.js'
+import speakerarray, { initAmpEQStateArray } from './helper.js'
 
 class ModuleInstance extends InstanceBase {
 
@@ -111,7 +111,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	setAmpPower(power, type) {
-		let powerType = false
+		let powerType;
 		switch (type) {
 			case '5D':
 				powerType = power
@@ -147,23 +147,37 @@ class ModuleInstance extends InstanceBase {
 
 	setAmpDelay(ch, delay) {
 		this.log('debug', 'Setting Delay for ' + ch + ' to ' + delay)
-		this.ampDelays[ch].SetSetting(delay).then((v) => {
-			let varindex = `amp_delay_ch_${ch}`
-			this.setVariableValues({ [varindex]: delay })
-		});
+		switch (this.type) {
+			case '5D':
+				console.log("debug", "Setting Delay for " + ch + " to " + delay);
+				this.ampDelays[ch].SetDelayTime(delay/1000).then(() => {
+					let varindex = `amp_delay_ch_${ch}`
+					this.setVariableValues({ [varindex]: delay })
+				}).catch((err) => {
+					this.log("error", "Error setting delay: " + JSON.stringify(err));
+				});
+				break;
+
+			default:
+
+				this.ampDelays[ch].SetSetting(delay).then(() => {
+					let varindex = `amp_delay_ch_${ch}`
+					this.setVariableValues({ [varindex]: delay })
+				});
+		}
 	}
 
 	setAmpDelayState(ch, state) {
 		this.log('debug', 'Setting Delay Bypass for ' + ch + ' to ' + state)
-		this.ampDelayStateObjs[ch].SetPosition(state).then((v) => {
+		this.ampDelayStateObjs[ch].SetPosition(state).then(() => {
 			let varindex = `amp_delay_bypass_ch_${ch}`
 			this.setVariableValues({ [varindex]: state })
 		});
 	}
 
 	setAmpChannelLevel(ch, level) {
-		this.log('debug', 'Setting Channel Level for ' + ch + ' to ' + level)
-		this.channellevel[ch].SetGain(level).then((v) => {
+		this.log('debug', 'Setting Channel Level fo ' + ch + ' to ' + level)
+		this.channellevel[ch].SetGain(level).then(() => {
 			let varindex = `amp_channel_level_${ch}`
 			this.setVariableValues({ [varindex]: level })
 		});
@@ -171,7 +185,7 @@ class ModuleInstance extends InstanceBase {
 
 	setAmpInputGainEnable(state) {
 		this.log('debug', 'Setting Input Gain Enable to ' + state)
-		this.ampInputGainStateObj.SetPosition(state).then((v) => {
+		this.ampInputGainStateObj.SetPosition(state).then(() => {
 			let varindex = `amp_input_gain_enable`
 			this.ampInputGainState = state;
 			this.setVariableValues({ [varindex]: state })
@@ -183,7 +197,7 @@ class ModuleInstance extends InstanceBase {
 
 
 	readAmpPresetNames(map) {
-		if (this.type == '5D') {
+		if (this.type === '5D') {
 			return
 		}
 
@@ -203,7 +217,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	readAmpPresetStates(map) {
-		if (this.type == '5D') {
+		if (this.type === '5D') {
 			return
 		}
 
@@ -223,7 +237,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	readAmpPresetLastReCall(map) {
-		if (this.type == '5D') {
+		if (this.type === '5D') {
 			return
 		}
 
@@ -245,47 +259,83 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	readAmpSpeakerIDs(map){
-		const speakerID = map.get('Config/Config_SpeakerId1');
-		speakerID.GetPositionNames().then((v) => {
-			this.ampSpeakerIDNames = v;
-			this.setVariableValues({ amp_speaker_names: JSON.stringify(v) });
-		})
+		this.setVariableValues({ amp_speaker_names: speakerarray });
+		this.ampSpeakerIDNames = speakerarray;
 		for(let i = 1; i <= 4; i++) {
-			const id = map.get('Config/Config_SpeakerId' + i);
-			id.GetPosition().then((v) => {
-				this.ampChannelSpeakerID[i-1] = v.item(0);
-				let varindex = `amp_speaker_id_ch_${i-1}`;
-				let varname = `amp_speaker_name_ch_${i-1}`;
-				this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
-			})
-			id.OnPositionChanged.subscribe((v) => {
-				this.ampChannelSpeakerID[i-1] = v.item(0);
-				let varindex = `amp_speaker_id_ch_${i-1}`;
-				let varname = `amp_speaker_name_ch_${i-1}`;
-				this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
-			})
+			const id = map.get(this.getConfigPath(this.type) + '/Config_SpeakerId' + i);
+			switch (this.type) {
+				case '5D':
+					id.GetReading().then((v) => {
+						this.ampChannelSpeakerID[i-1] = v.item(0);
+						let varindex = `amp_speaker_id_ch_${i-1}`;
+						let varname = `amp_speaker_name_ch_${i-1}`;
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+					})
+					id.OnReadingChanged.subscribe((v) => {
+						this.ampChannelSpeakerID[i-1] = v.item(0);
+						let varindex = `amp_speaker_id_ch_${i-1}`;
+						let varname = `amp_speaker_name_ch_${i-1}`;
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+					})
+					break;
+				default:
+					id.GetPosition().then((v) => {
+						this.ampChannelSpeakerID[i-1] = v.item(0);
+						let varindex = `amp_speaker_id_ch_${i-1}`;
+						let varname = `amp_speaker_name_ch_${i-1}`;
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+					})
+					id.OnPositionChanged.subscribe((v) => {
+						this.ampChannelSpeakerID[i-1] = v.item(0);
+						let varindex = `amp_speaker_id_ch_${i-1}`;
+						let varname = `amp_speaker_name_ch_${i-1}`;
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+					})
+			}
 		}
 	}
 
 	readAmpDelay(map) {
-		for(let i = 1; i <= 4; i++) {
-			const delay = map.get('Config/Config_Delay' + i);
-			this.ampDelays.push(delay);
-			delay.GetSetting().then((v) => {
-				let varindex = `amp_delay_ch_${i-1}`;
-				this.setVariableValues({[varindex]: v.item(0).toFixed(5)});
-			})
-			delay.OnSettingChanged.subscribe((v) => {
-				let varindex = `amp_delay_ch_${i-1}`;
-				this.log("debug", "Setting Delay for " + varindex + " to " + JSON.stringify(v));
-				this.setVariableValues({[varindex]: v.toFixed(5)});
-			})
+		const defaultOno = 268469258
+		const delayOffset = 32768;
+		switch (this.type) {
+			case '5D':
+				for(let i = 0; i < 4; i++) {
+					const delay = new RemoteControlClasses.OcaDelay(defaultOno+(i*delayOffset),this.remoteDevice)
+					this.ampDelays.push(delay);
+					delay.GetDelayTime().then((v) => {
+						let varindex = `amp_delay_ch_${i}`;
+						this.setVariableValues({[varindex]: (v.values[0]*1000).toFixed(2)});
+					}).catch(err => {
+						this.log("error", "Error getting delay setting: " + JSON.stringify(err));
+					})
+					delay.OnDelayTimeChanged.subscribe((v) => {
+						let varindex = `amp_delay_ch_${i}`;
+						this.setVariableValues({[varindex]: (v*1000).toFixed(2)});
+					})
+				}
+
+				break;
+			default:
+				for(let i = 1; i <= 4; i++) {
+					const delay = map.get(this.getConfigPath(this.type) + '/Config_Delay' + i);
+					this.ampDelays.push(delay);
+					delay.GetSetting().then((v) => {
+						let varindex = `amp_delay_ch_${i-1}`;
+						this.setVariableValues({[varindex]: v.item(0).toFixed(2)});
+					})
+					delay.OnSettingChanged.subscribe((v) => {
+						let varindex = `amp_delay_ch_${i-1}`;
+						this.log("debug", "Setting Delay for " + varindex + " to " + JSON.stringify(v));
+						this.setVariableValues({[varindex]: v.toFixed(2)});
+					})
+				}
 		}
 	}
 
 	readAmpDelayState(map) {
 		for (let i = 1; i <= 4; i++) {
-			const delaystate = map.get('Config/Config_DelayOn' + i)
+			const delaystate = map.get(this.getConfigPath(this.type) + '/Config_DelayOn' + i)
 			this.ampDelayStateObjs.push(delaystate)
 			delaystate.GetPosition().then((v) => {
 				this.ampDelayStates[i-1] = v.item(0) === 1
@@ -344,7 +394,7 @@ class ModuleInstance extends InstanceBase {
 				this.aescon = con
 				this.remoteDevice = new RemoteDevice(con)
 				this.remoteDevice.set_keepalive_interval(1)
-				this.remoteDevice.on('close', (args) => {
+				this.remoteDevice.on('close', () => {
 					this.log('warn', 'Date: ' + new Date().toISOString() + ' | AES70 Device Connection closed!')
 					this.ready = false
 					this.log(
@@ -497,7 +547,7 @@ class ModuleInstance extends InstanceBase {
 														this.checkFeedbacks('ChannelState')
 													})
 													v.OnStateChanged.subscribe((val) => {
-														this.setAmpMute(index, val == 1)
+														this.setAmpMute(index, val === 1)
 														this.checkFeedbacks('ChannelState')
 													})
 												})
@@ -586,7 +636,7 @@ class ModuleInstance extends InstanceBase {
 				id: 'port',
 				label: 'Target Port',
 				width: 4,
-				isVisible: (options) => options['type'] == 'custom',
+				isVisible: (options) => options['type'] === 'custom',
 				regex: Regex.PORT,
 				default: 50014,
 			},

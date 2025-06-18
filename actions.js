@@ -709,9 +709,9 @@ export function updateA(self) {
 					id: 'delay',
 					type: 'number',
 					label: 'Delay Time (ms)',
-					default: 0.3,
-					min: 0.3,
-					max: 10000
+					default: self.config.type === '5D' ? 1.1 : 0.3,
+					min: self.config.type === '5D' ? 1.1 : 0.3,
+					max: self.config.type === '5D' ? 300 : 10000,
 				},
 			],
 			callback: async (event) => {
@@ -881,7 +881,7 @@ export function updateA(self) {
 								self.log('info', 'Amp Preset ' + event.options.amp_preset + ' recalled successfully!')
 							})
 							.catch((err) => {
-								self.log('error', 'Error recall Amp Preset:', error)
+								self.log('error', 'Error recall Amp Preset:', err)
 							})
 					}
 				} else {
