@@ -547,8 +547,8 @@ class ModuleInstance extends InstanceBase {
 														this.checkFeedbacks('ChannelState')
 													})
 													v.OnStateChanged.subscribe((val) => {
-														this.setAmpMute(index, val === 1)
-														this.checkFeedbacks('ChannelState')
+														this.setAmpMute(index, val === Types.OcaMuteState.Muted)
+														this.checkFeedbacks('ChannelState');
 													})
 												})
 											}
@@ -578,14 +578,11 @@ class ModuleInstance extends InstanceBase {
 	// When module gets deleted
 	async destroy() {
 		clearInterval(this.intervalPower)
-		this.muteObj.forEach((v) => {
-			v.OnStateChanged.unsubscribe()
-		})
-		this.presetNames.forEach((pn) => {
-			pn.OnSettingChanged.unsubscribe()
-		})
-		this.powerObj.OnPositionChanged.unsubscribe()
-		this.aescon.cleanup()
+		this.aescon.
+		this.aescon.removeAllEventListeners();
+		if(!this.aescon.is_closed()) {
+			this.aescon.close();
+		}
 		this.updateStatus(InstanceStatus.Disconnected)
 		this.log('debug', 'destroy')
 	}

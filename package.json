@@ -12,8 +12,8 @@
 		"url": "git+https://github.com/bitfocus/companion-module-dbaudiotechnik-amps.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.10.0",
-		"aes70": "^1.5.3"
+		"@companion-module/base": "^1.12.1",
+		"aes70": "^1.6.2"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.0.3",
