@@ -31,3 +31,5 @@ Updates
 1.1.0 - Add EQ Control | Delay Control | Input Gain Bypass | Channel Level Set 
 <br>
 1.1.1 - Fix Dealy readout and set (5D)
+<br>
+1.1.2 - Fix Mute State Feedback
