@@ -5,10 +5,12 @@ import { updateV } from './variables.js'
 import { AmpPresets } from './amp_custom_class/amp-presets.js'
 import { OcaFilterDB } from './amp_custom_class/eq/OcaFilterDB.js'
 import { TCPConnection, RemoteDevice, RemoteControlClasses, Types } from 'aes70'
-import speakerarray, { initAmpEQStateArray } from './helper.js'
+
+import speakerarray, { bandToChEqBand, parseEqPropertyChange, initAmpEQStateArray, getEqBandArray } from './helper.js'
+import { Arguments } from 'aes70/src/controller/arguments.js'
+import { OcaStatus } from 'aes70/src/types/OcaStatus.js'
 
 class ModuleInstance extends InstanceBase {
-
 	constructor(internal) {
 		super(internal)
 	}
@@ -27,16 +29,17 @@ class ModuleInstance extends InstanceBase {
 		this.presetStates = []
 		this.channellevel = []
 		this.ampPresetAgent = {}
-		this.ampEqAgents = new Map();
-		this.ampEQs = new Map();
-		this.ampDelays = [];
-		this.ampDelayStateObjs = [];
+		this.ampEqAgents = new Map()
+		this.ampEQs = new Map()
+		this.ampEQValues = []
+		this.ampDelays = []
+		this.ampDelayStateObjs = []
 		this.ampDelayStates = [false, false, false, false]
-		this.ampEQState = initAmpEQStateArray(this.type);
+		this.ampEQState = initAmpEQStateArray(this.type)
 		this.ampInputGainStateObj = {}
 		this.ampInputGainState = false
-		this.ampSpeakerIDNames = [];
-		this.ampChannelSpeakerID = [0,0,0,0];
+		this.ampSpeakerIDNames = []
+		this.ampChannelSpeakerID = [0, 0, 0, 0]
 		this.presetLast = undefined
 		this.ready = true
 		this.updateActions(InstanceStatus.Connecting)
@@ -69,6 +72,15 @@ class ModuleInstance extends InstanceBase {
 				return 'Config_Box'
 			default:
 				return 'Config'
+		}
+	}
+
+	getChStatusPath(type) {
+		switch (type) {
+			case '5D':
+				return 'ChStatus_Box'
+			default:
+				return 'ChStatus'
 		}
 	}
 
@@ -111,7 +123,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	setAmpPower(power, type) {
-		let powerType;
+		let powerType
 		switch (type) {
 			case '5D':
 				powerType = power
@@ -141,60 +153,48 @@ class ModuleInstance extends InstanceBase {
 				break
 		}
 		this.checkFeedbacks('EQState')
-		let varindex = `amp_ch_${ch}_eq_${eq}`
+		let varindex = `amp_ch_${ch}_eq_${eq}_bypass`
 		this.setVariableValues({ [varindex]: bypass })
 	}
 
 	setAmpDelay(ch, delay) {
 		this.log('debug', 'Setting Delay for ' + ch + ' to ' + delay)
-		switch (this.type) {
-			case '5D':
-				this.log("debug", "Setting Delay for " + ch + " to " + delay);
-				this.ampDelays[ch].SetDelayTime(delay/1000).then(() => {
-					let varindex = `amp_delay_ch_${ch}`
-					this.setVariableValues({ [varindex]: delay })
-				}).catch((err) => {
-					this.log("error", "Error setting delay: " + JSON.stringify(err));
-				});
-				break;
-
-			default:
-
-				this.ampDelays[ch].SetSetting(delay).then(() => {
-					let varindex = `amp_delay_ch_${ch}`
-					this.setVariableValues({ [varindex]: delay })
-				});
-		}
+		this.ampDelays[ch].SetDelayTime(delay / 1000).then(() => {
+			let varindex = `amp_delay_ch_${ch}`
+			this.setVariableValues({ [varindex]: delay })
+		})
 	}
 
 	setAmpDelayState(ch, state) {
 		this.log('debug', 'Setting Delay Bypass for ' + ch + ' to ' + state)
-		this.ampDelayStateObjs[ch].SetPosition(state).then(() => {
+		this.ampDelayStateObjs[ch].SetPosition(state).then((v) => {
 			let varindex = `amp_delay_bypass_ch_${ch}`
 			this.setVariableValues({ [varindex]: state })
-		});
+		})
 	}
 
 	setAmpChannelLevel(ch, level) {
-		this.log('debug', 'Setting Channel Level fo ' + ch + ' to ' + level)
-		this.channellevel[ch].SetGain(level).then(() => {
+		this.log('debug', 'Setting Channel Level for ' + ch + ' to ' + level)
+		this.channellevel[ch].SetGain(level).then((v) => {
 			let varindex = `amp_channel_level_${ch}`
 			this.setVariableValues({ [varindex]: level })
-		});
+		})
 	}
 
 	setAmpInputGainEnable(state) {
 		this.log('debug', 'Setting Input Gain Enable to ' + state)
-		this.ampInputGainStateObj.SetPosition(state).then(() => {
-			let varindex = `amp_input_gain_enable`
-			this.ampInputGainState = state;
-			this.setVariableValues({ [varindex]: state })
-			this.checkFeedbacks('InputGainEnable')
-		}).catch((err) => {
-			this.log("error", JSON.stringify(err))
-		});
+		this.ampInputGainStateObj
+			.SetPosition(state)
+			.then(() => {
+				let varindex = `amp_input_gain_enable`
+				this.ampInputGainState = state
+				this.setVariableValues({ [varindex]: state })
+				this.checkFeedbacks('InputGainEnable')
+			})
+			.catch((err) => {
+				this.log('error', JSON.stringify(err))
+			})
 	}
-
 
 	readAmpPresetNames(map) {
 		if (this.type === '5D') {
@@ -258,78 +258,60 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	readAmpSpeakerIDs(map){
-		this.setVariableValues({ amp_speaker_names: speakerarray });
-		this.ampSpeakerIDNames = speakerarray;
-		for(let i = 1; i <= 4; i++) {
-			const id = map.get(this.getConfigPath(this.type) + '/Config_SpeakerId' + i);
+	readAmpSpeakerIDs(map) {
+		this.setVariableValues({ amp_speaker_names: speakerarray })
+		this.ampSpeakerIDNames = speakerarray
+		for (let i = 1; i <= 4; i++) {
+			const id = map.get(this.getConfigPath(this.type) + '/Config_SpeakerId' + i)
 			switch (this.type) {
 				case '5D':
 					id.GetReading().then((v) => {
-						this.ampChannelSpeakerID[i-1] = v.item(0);
-						let varindex = `amp_speaker_id_ch_${i-1}`;
-						let varname = `amp_speaker_name_ch_${i-1}`;
-						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+						this.ampChannelSpeakerID[i - 1] = v.item(0)
+						let varindex = `amp_speaker_id_ch_${i - 1}`
+						let varname = `amp_speaker_name_ch_${i - 1}`
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0) - 1] })
 					})
 					id.OnReadingChanged.subscribe((v) => {
-						this.ampChannelSpeakerID[i-1] = v.item(0);
-						let varindex = `amp_speaker_id_ch_${i-1}`;
-						let varname = `amp_speaker_name_ch_${i-1}`;
-						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+						this.ampChannelSpeakerID[i - 1] = v.item(0)
+						let varindex = `amp_speaker_id_ch_${i - 1}`
+						let varname = `amp_speaker_name_ch_${i - 1}`
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0) - 1] })
 					})
-					break;
+					break
 				default:
+					id.GetPositionNames().then((value) => {
+						this.setVariableValues({ amp_speaker_names: value })
+						this.ampSpeakerIDNames = value
+					})
 					id.GetPosition().then((v) => {
-						this.ampChannelSpeakerID[i-1] = v.item(0);
-						let varindex = `amp_speaker_id_ch_${i-1}`;
-						let varname = `amp_speaker_name_ch_${i-1}`;
-						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+						this.ampChannelSpeakerID[i - 1] = v.item(0)
+						let varindex = `amp_speaker_id_ch_${i - 1}`
+						let varname = `amp_speaker_name_ch_${i - 1}`
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0) - 1] })
 					})
 					id.OnPositionChanged.subscribe((v) => {
-						this.ampChannelSpeakerID[i-1] = v.item(0);
-						let varindex = `amp_speaker_id_ch_${i-1}`;
-						let varname = `amp_speaker_name_ch_${i-1}`;
-						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0)-1] });
+						this.ampChannelSpeakerID[i - 1] = v.item(0)
+						let varindex = `amp_speaker_id_ch_${i - 1}`
+						let varname = `amp_speaker_name_ch_${i - 1}`
+						this.setVariableValues({ [varindex]: v.item(0), [varname]: this.ampSpeakerIDNames[v.item(0) - 1] })
 					})
 			}
 		}
 	}
 
 	readAmpDelay(map) {
-		const defaultOno = 268469258
-		const delayOffset = 32768;
-		switch (this.type) {
-			case '5D':
-				for(let i = 0; i < 4; i++) {
-					const delay = new RemoteControlClasses.OcaDelay(defaultOno+(i*delayOffset),this.remoteDevice)
-					this.ampDelays.push(delay);
-					delay.GetDelayTime().then((v) => {
-						let varindex = `amp_delay_ch_${i}`;
-						this.setVariableValues({[varindex]: (v.values[0]*1000).toFixed(2)});
-					}).catch(err => {
-						this.log("error", "Error getting delay setting: " + JSON.stringify(err));
-					})
-					delay.OnDelayTimeChanged.subscribe((v) => {
-						let varindex = `amp_delay_ch_${i}`;
-						this.setVariableValues({[varindex]: (v*1000).toFixed(2)});
-					})
-				}
-
-				break;
-			default:
-				for(let i = 1; i <= 4; i++) {
-					const delay = map.get(this.getConfigPath(this.type) + '/Config_Delay' + i);
-					this.ampDelays.push(delay);
-					delay.GetSetting().then((v) => {
-						let varindex = `amp_delay_ch_${i-1}`;
-						this.setVariableValues({[varindex]: v.item(0).toFixed(2)});
-					})
-					delay.OnSettingChanged.subscribe((v) => {
-						let varindex = `amp_delay_ch_${i-1}`;
-						this.log("debug", "Setting Delay for " + varindex + " to " + JSON.stringify(v));
-						this.setVariableValues({[varindex]: v.toFixed(2)});
-					})
-				}
+		for (let i = 1; i <= 4; i++) {
+			const delay = map.get(this.getChStatusPath(this.type) + '/ChStatus_MsDelay' + i)
+			this.ampDelays.push(delay)
+			delay.GetDelayTime().then((v) => {
+				let varindex = `amp_delay_ch_${i - 1}`
+				this.setVariableValues({ [varindex]: (v.item(0) * 1000).toFixed(2) })
+			})
+			delay.OnDelayTimeChanged.subscribe((v) => {
+				let varindex = `amp_delay_ch_${i - 1}`
+				this.log('debug', 'Setting Delay for ' + varindex + ' to ' + JSON.stringify(v))
+				this.setVariableValues({ [varindex]: (v * 1000).toFixed(2) })
+			})
 		}
 	}
 
@@ -338,24 +320,24 @@ class ModuleInstance extends InstanceBase {
 			const delaystate = map.get(this.getConfigPath(this.type) + '/Config_DelayOn' + i)
 			this.ampDelayStateObjs.push(delaystate)
 			delaystate.GetPosition().then((v) => {
-				this.ampDelayStates[i-1] = v.item(0) === 1
+				this.ampDelayStates[i - 1] = v.item(0) === 1
 				this.checkFeedbacks('DelayState')
 				let varindex = `amp_delay_bypass_ch_${i - 1}`
 				this.setVariableValues({ [varindex]: v.item(0) === 1 })
 			})
 			delaystate.OnPositionChanged.subscribe((v) => {
-				this.ampDelayStates[i-1] = v === 1
+				this.ampDelayStates[i - 1] = v === 1
 				this.checkFeedbacks('DelayState')
 				let varindex = `amp_delay_bypass_ch_${i - 1}`
 				this.setVariableValues({ [varindex]: v === 1 })
-			});
+			})
 		}
 	}
 
 	readAmpChannelLevel(map) {
 		for (let i = 1; i <= 4; i++) {
-			const channel = map.get(this.getConfigPath(this.type) +'/Config_PotiLevel' + i)
-			this.channellevel.push(channel);
+			const channel = map.get(this.getConfigPath(this.type) + '/Config_PotiLevel' + i)
+			this.channellevel.push(channel)
 			channel.GetGain().then((v) => {
 				this.setVariableValues({ [`amp_channel_level_${i}`]: v.item(0) })
 			})
@@ -370,12 +352,12 @@ class ModuleInstance extends InstanceBase {
 		this.ampInputGainStateObj = inputgain
 		inputgain.GetPosition().then((v) => {
 			this.setVariableValues({ amp_input_gain_enable: v.item(0) === 1 })
-			this.ampInputGainState = v.item(0) === 1;
+			this.ampInputGainState = v.item(0) === 1
 			this.checkFeedbacks('InputGainEnable')
 		})
 		inputgain.OnPositionChanged.subscribe((v) => {
 			this.setVariableValues({ amp_input_gain_enable: v === 1 })
-			this.ampInputGainState = v === 1;
+			this.ampInputGainState = v === 1
 			this.checkFeedbacks('InputGainEnable')
 		})
 	}
@@ -424,7 +406,6 @@ class ModuleInstance extends InstanceBase {
 					}, 10000)
 				})
 				if (this.ready) {
-
 					// Add custom classes
 					this.remoteDevice.add_control_classes([AmpPresets])
 					this.remoteDevice.add_control_classes([OcaFilterDB])
@@ -448,13 +429,12 @@ class ModuleInstance extends InstanceBase {
 								})
 							})
 					})
-					this.remoteDevice.get_role_map().then((map) => {
-
-						this.readAmpSpeakerIDs(map);
-						this.readAmpDelay(map);
-						this.readAmpDelayState(map);
-						this.readAmpChannelLevel(map);
-						this.readAmpInputGainEnable(map);
+					this.remoteDevice.get_role_map().then(async (map) => {
+						this.readAmpSpeakerIDs(map)
+						this.readAmpDelay(map)
+						this.readAmpDelayState(map)
+						this.readAmpChannelLevel(map)
+						this.readAmpInputGainEnable(map)
 						this.readAmpPresetNames(map)
 						this.readAmpPresetStates(map)
 						this.readAmpPresetLastReCall(map)
@@ -469,68 +449,146 @@ class ModuleInstance extends InstanceBase {
 						if (map.get(this.getPowerPath(this.type))) {
 							this.powerObj = map.get(this.getPowerPath(this.type))
 							this.powerObj.GetPosition().then((v) => {
-							this.setAmpPower(v.item(0) === 0, this.type)
-							this.checkFeedbacks('PowerState')
-						})
-						this.powerObj.OnPositionChanged.subscribe((val) => {
-							this.setAmpPower(val === 0, this.type)
+								this.setAmpPower(v.item(0) === 0, this.type)
+								this.checkFeedbacks('PowerState')
+							})
+							this.powerObj.OnPositionChanged.subscribe((val) => {
+								this.setAmpPower(val === 0, this.type)
 								this.checkFeedbacks('PowerState')
 							})
 						}
 
 						//Ch Count
-						const channelCount = 4;
+						const channelCount = 4
 						//Eq Count
 						const eqCount = 2
 						//Eq Band Count
 
-						let eqBandCount = this.config.type === '5D' ? 8 : 16;
+						let eqBandCount = this.config.type === '5D' ? 8 : 16
 
-						for(let i = 1; i <= channelCount; i++) {
-							const eq1 = map.get(this.getConfigPath(this.type) + '/Config_Eq1Enable' + i);
+						for (let i = 1; i <= channelCount; i++) {
+							const eq1 = map.get(this.getConfigPath(this.type) + '/Config_Eq1Enable' + i)
 							eq1.GetPosition().then((v) => {
-								this.setAmpEqBypass(i-1,1,v.item(0) === 0)
+								this.setAmpEqBypass(i - 1, 1, v.item(0) === 0)
 								this.checkFeedbacks('EQState')
 							})
 							eq1.OnPositionChanged.subscribe((val) => {
-								this.setAmpEqBypass(i-1,1,val === 0)
+								this.setAmpEqBypass(i - 1, 1, val === 0)
 								this.checkFeedbacks('EQState')
-							});
-							if(this.config.type === '5D') {
-								this.ampEQs.set(i,{eq1:eq1});
-								continue;
+							})
+							if (this.config.type === '5D') {
+								this.ampEQs.set(i, { eq1: eq1 })
+								continue
 							}
-							const eq2 = map.get(this.getConfigPath(this.type) + '/Config_Eq2Enable' + i);
+							const eq2 = map.get(this.getConfigPath(this.type) + '/Config_Eq2Enable' + i)
 							eq2.GetPosition().then((v) => {
-								this.setAmpEqBypass(i-1,2,v.item(0) === 0)
+								this.setAmpEqBypass(i - 1, 2, v.item(0) === 0)
 								this.checkFeedbacks('EQState')
 							})
 							eq2.OnPositionChanged.subscribe((val) => {
-								this.setAmpEqBypass(i-1,2,val === 0)
+								this.setAmpEqBypass(i - 1, 2, val === 0)
 								this.checkFeedbacks('EQState')
-							});
-							this.ampEQs.set(i,{eq1:eq1,eq2:eq2});
+							})
+							this.ampEQs.set(i, { eq1: eq1, eq2: eq2 })
 						}
 
-						this.log("debug", "Found " + this.ampEQs.size + " EQs");
+						this.log('debug', 'Found ' + this.ampEQs.size + ' EQs')
 
 						let count = 1
-
-						for(let chSplit = 0; chSplit < (channelCount * eqCount *  eqBandCount); chSplit++) {
-							let key = this.getEqBandPath(this.type) + count;
+						for (let chSplit = 0; chSplit < channelCount * eqCount * eqBandCount; chSplit++) {
+							let key = this.getEqBandPath(this.type) + count
 							const eqAgent = map.get(key.toString())
 							if (eqAgent) {
-								this.ampEqAgents.set("band_"+ count,eqAgent);
+								const bandNum = count
+								const bandJson = bandToChEqBand(count, this.type)
+								const varPath = 'amp_ch_' + bandJson.ch + '_eq_' + bandJson.eq
+								const bandKey = 'band_' + bandNum
+								const eqKey = 'ch_' + bandJson.ch + '_eq_' + bandJson.eq
+								this.ampEqAgents.set(bandKey, eqAgent)
+
+								let bandMap = new Map()
+								eqAgent.get_properties().forEach(async (prop) => {
+									const getter = prop.getter(eqAgent)
+									if (!getter) return
+
+									let a
+
+									try {
+										a = await getter()
+									} catch (e) {
+										if (e.status === OcaStatus.NotImplemented) return
+										this.log('error', 'Error getting property ' + prop.name + ' for ' + key + ': ' + JSON.stringify(e))
+									}
+
+									if (
+										prop.name === 'Role' ||
+										prop.name === 'Ports' ||
+										prop.name === 'ClassID' ||
+										prop.name === 'ClassVersion' ||
+										prop.name === 'Lockable' ||
+										prop.name === 'Enabled' ||
+										prop.name === 'Owner' ||
+										prop.name === 'Latency' ||
+										prop.name === 'Label'
+									) {
+										return
+									}
+									if (a instanceof Arguments) {
+										bandMap.set(prop.name, a.item(0))
+										this.ampEQValues[bandNum] = bandMap
+										this.setVariableValues({
+											[varPath]: JSON.stringify(getEqBandArray(this.ampEQValues, bandJson.ch, bandJson.eq, this.type)),
+										})
+										this.checkFeedbacks('EQDataState')
+										return
+									}
+
+									if (a === true || a === false) {
+										const boolVal = a ? 'true' : 'false'
+										bandMap.set(prop.name, boolVal)
+										this.ampEQValues[bandNum] = bandMap
+										this.setVariableValues({
+											[varPath]: JSON.stringify(getEqBandArray(this.ampEQValues, bandJson.ch, bandJson.eq, this.type)),
+										})
+										this.checkFeedbacks('EQDataState')
+										return
+									}
+
+									if (a.value !== undefined) {
+										const val = Number.parseInt(a.value)
+										bandMap.set(prop.name, val)
+										this.ampEQValues[bandNum] = bandMap
+										this.setVariableValues({
+											[varPath]: JSON.stringify(getEqBandArray(this.ampEQValues, bandJson.ch, bandJson.eq, this.type)),
+										})
+										this.checkFeedbacks('EQDataState')
+										return
+									}
+
+									this.log('debug', 'name: ' + prop.name + 'udef:' + JSON.stringify(a))
+								})
+
+								eqAgent.OnPropertyChanged.subscribe((value) => {
+									const parsed = parseEqPropertyChange(bandNum, value, this.type)
+									if (parsed) {
+										let mapObj = this.ampEQValues[bandNum]
+										mapObj.set(parsed.propertyName, parsed.value)
+										this.ampEQValues[bandNum] = mapObj
+										this.setVariableValues({
+											[varPath]: JSON.stringify(getEqBandArray(this.ampEQValues, bandJson.ch, bandJson.eq, this.type)),
+										})
+										this.checkFeedbacks('EQDataState')
+									}
+								})
 							}
-							count++;
+							count++
 						}
 
-						this.log("debug", "Found " + this.ampEqAgents.size + " EQ Agents");
+						this.log('debug', 'Found ' + this.ampEqAgents.size + ' EQ Agents')
 
 						if (this.type !== '5D') {
 							this.ampPresetAgent = map.get('AmpPresets')
 						}
-
 					})
 					this.remoteDevice.get_device_tree().then((tree) => {
 						var i = 0
@@ -548,7 +606,7 @@ class ModuleInstance extends InstanceBase {
 													})
 													v.OnStateChanged.subscribe((val) => {
 														this.setAmpMute(index, val === Types.OcaMuteState.Muted)
-														this.checkFeedbacks('ChannelState');
+														this.checkFeedbacks('ChannelState')
 													})
 												})
 											}
@@ -578,9 +636,9 @@ class ModuleInstance extends InstanceBase {
 	// When module gets deleted
 	async destroy() {
 		clearInterval(this.intervalPower)
-		this.aescon.removeAllEventListeners();
-		if(!this.aescon.is_closed()) {
-			this.aescon.close();
+		this.aescon.removeAllEventListeners()
+		if (!this.aescon.is_closed()) {
+			this.aescon.close()
 		}
 		this.updateStatus(InstanceStatus.Disconnected)
 		this.log('debug', 'destroy')

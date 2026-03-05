@@ -9,10 +9,10 @@ export async function updateV(self) {
 		{ variableId: 'amp_mute_1', name: 'Mute Ch2' },
 		{ variableId: 'amp_mute_2', name: 'Mute Ch3' },
 		{ variableId: 'amp_mute_3', name: 'Mute Ch4' },
-		{ variableId: 'amp_ch_0_eq_1', name: 'EQ Bypass Ch1 EQ1' },
-		{ variableId: 'amp_ch_1_eq_1', name: 'EQ Bypass Ch2 EQ1' },
-		{ variableId: 'amp_ch_2_eq_1', name: 'EQ Bypass Ch3 EQ1' },
-		{ variableId: 'amp_ch_3_eq_1', name: 'EQ Bypass Ch4 EQ1' },
+		{ variableId: 'amp_ch_0_eq_1_bypass', name: 'EQ Bypass Ch1 EQ1' },
+		{ variableId: 'amp_ch_1_eq_1_bypass', name: 'EQ Bypass Ch2 EQ1' },
+		{ variableId: 'amp_ch_2_eq_1_bypass', name: 'EQ Bypass Ch3 EQ1' },
+		{ variableId: 'amp_ch_3_eq_1_bypass', name: 'EQ Bypass Ch4 EQ1' },
 		{ variableId: 'amp_delay_ch_0', name: 'Delay Ch1' },
 		{ variableId: 'amp_delay_ch_1', name: 'Delay Ch2' },
 		{ variableId: 'amp_delay_ch_2', name: 'Delay Ch3' },
@@ -39,6 +39,10 @@ export async function updateV(self) {
 		{ variableId: 'amp_input_gain_ch_1', name: 'Input Gain Ch2' },
 		{ variableId: 'amp_input_gain_ch_2', name: 'Input Gain Ch3' },
 		{ variableId: 'amp_input_gain_ch_3', name: 'Input Gain Ch4' },
+		{ variableId: 'amp_ch_1_eq_1', name: 'EQ  Ch1 EQ1' },
+		{ variableId: 'amp_ch_2_eq_1', name: 'EQ  Ch2 EQ1' },
+		{ variableId: 'amp_ch_3_eq_1', name: 'EQ  Ch3 EQ1' },
+		{ variableId: 'amp_ch_4_eq_1', name: 'EQ  Ch4 EQ1' },
 	]
 
 	if (self.type != '5D') {
@@ -74,10 +78,14 @@ export async function updateV(self) {
 			{ variableId: 'amp_preset_state_13', name: 'Amp Preset State Backup 1' },
 			{ variableId: 'amp_preset_state_14', name: 'Amp Preset State Backup 2' },
 			{ variableId: 'amp_preset_state_15', name: 'Amp Preset State Backup 3' },
-			{ variableId: 'amp_ch_0_eq_2', name: 'EQ Bypass Ch1 EQ2' },
-			{ variableId: 'amp_ch_1_eq_2', name: 'EQ Bypass Ch2 EQ2' },
-			{ variableId: 'amp_ch_2_eq_2', name: 'EQ Bypass Ch3 EQ2' },
-			{ variableId: 'amp_ch_3_eq_2', name: 'EQ Bypass Ch4 EQ2' },
+			{ variableId: 'amp_ch_0_eq_2_bypass', name: 'EQ Bypass Ch1 EQ2' },
+			{ variableId: 'amp_ch_1_eq_2_bypass', name: 'EQ Bypass Ch2 EQ2' },
+			{ variableId: 'amp_ch_2_eq_2_bypass', name: 'EQ Bypass Ch3 EQ2' },
+			{ variableId: 'amp_ch_3_eq_2_bypass', name: 'EQ Bypass Ch4 EQ2' },
+			{ variableId: 'amp_ch_1_eq_2', name: 'EQ  Ch1 EQ2' },
+			{ variableId: 'amp_ch_2_eq_2', name: 'EQ  Ch2 EQ2' },
+			{ variableId: 'amp_ch_3_eq_2', name: 'EQ  Ch3 EQ2' },
+			{ variableId: 'amp_ch_4_eq_2', name: 'EQ  Ch4 EQ2' },
 		)
 	}
 

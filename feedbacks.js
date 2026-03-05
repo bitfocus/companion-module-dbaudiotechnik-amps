@@ -77,8 +77,8 @@ export async function updateF(self) {
 			],
 			callback: (feedback) => {
 				if (self.ready) {
-					const eqKey = feedback.options.eq === 0 ? 'eq1' : 'eq2';
-					return self.ampEQState[feedback.options.ch][eqKey];
+					const eqKey = feedback.options.eq === 0 ? 'eq1' : 'eq2'
+					return self.ampEQState[feedback.options.ch][eqKey]
 				}
 			},
 		},
@@ -106,7 +106,7 @@ export async function updateF(self) {
 			],
 			callback: (feedback) => {
 				if (self.ready) {
-					return self.ampDelayStates[feedback.options.ch];
+					return self.ampDelayStates[feedback.options.ch]
 				}
 			},
 		},
@@ -121,7 +121,7 @@ export async function updateF(self) {
 			options: [],
 			callback: (feedback) => {
 				if (self.ready) {
-					return self.ampInputGainState;
+					return self.ampInputGainState
 				}
 			},
 		},

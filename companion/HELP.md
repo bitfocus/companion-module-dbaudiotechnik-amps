@@ -48,6 +48,7 @@ Specify the IP address of the amp you want to connect to.
 - Speaker Name per Channel
 - Speaker Types
 - Input Gain Enabled/Disabled
+- Channel A/B/C/D Eq parameters
 
 ### Available Feedbacks for d&b audiotechnik Amps
 
@@ -56,6 +57,7 @@ Specify the IP address of the amp you want to connect to.
 - Amp Last Preset Recall **(not for 5D)**
 - Amp Channel Eq Bypass A/B/C/D
 - Amp Channel Delay Bypass A/B/C/D
+- Amp Channel Eq Parameters A/B/C/D Match
 
 ### EQ All JSON Format
 - Band  1 to 16 (5D only 1 to 8)
